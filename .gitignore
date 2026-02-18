@@ -1,0 +1,15 @@
+# Python gereksizleri
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# RAG Veritabanı
+chroma_db/
+
+# IDE Ayarları
+.idea/
+.vscode/
+
+# Geçici dosyalar
+*.tmp
