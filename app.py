@@ -19,44 +19,55 @@ with st.sidebar:
     uploaded_file = st.file_uploader("PDF Dosyanızı Yükleyin", type="pdf")
 
     if uploaded_file:
-        # Dosyayı geçici bir yere kaydedip işleyeceğiz
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_path = tmp_file.name
 
-        # Butona basınca analiz başlasın (Sürekli çalışmasın diye)
+
         if st.button("Analiz Et ve Veritabanına Ekle"):
             with st.spinner("PDF Analiz ediliyor... Bu işlem biraz sürebilir."):
                 try:
-                    # SENİN YAZDIĞIN FONKSİYONU ÇAĞIRIYORUZ
+
                     pdf_to_vectorstore(tmp_path)
                     st.success("✅ PDF başarıyla vektörleştirildi! Artık soru sorabilirsin.")
                 except Exception as e:
                     st.error(f"Hata oluştu: {e}")
                 finally:
-                    # Temizlik: Geçici dosyayı sil
+
                     os.remove(tmp_path)
     st.markdown("---")
 
-    # Bu buton artık dosya yüklesen de yüklemesen de hep görünür.
     if st.button("🧹 Sistemi Sıfırla"):
-        # A) ChromaDB Klasörünü Sil
-        if os.path.exists("./chroma_db"):
+        # Dosyaların var olup olmadığını kontrol et
+        db_exists = os.path.exists("./chroma_db")
+        pkl_exists = os.path.exists("bm25_index.pkl")
+
+        # Eğer ikisinden biri bile varsa silme işlemini başlat
+        if db_exists or pkl_exists:
             try:
-                # Bazen Windows dosyayı bırakmaz, zorla sildiriyoruz.
-                shutil.rmtree("./chroma_db")
+                # 1. ChromaDB Klasörünü Sil
+                if db_exists:
+                    shutil.rmtree("./chroma_db")
+
+                # 2. BM25 Pickle Dosyasını Sil
+                if pkl_exists:
+                    os.remove("bm25_index.pkl")
+
                 st.success("Hafıza başarıyla silindi!")
 
-                # B) Sohbet Geçmişini Sıfırla
+                # 3. Sohbet Geçmişini Sıfırla
                 st.session_state.messages = []
 
-                # C) Sayfayı Yenile (Değişikliklerin görülmesi için şart)
+                # 4. Sayfayı Yenile (Bu komuttan sonraki kodlar çalışmaz)
                 st.rerun()
 
             except PermissionError:
                 st.error("Windows dosyayı kullanıyor. Lütfen uygulamayı durdurup (Ctrl+C) tekrar başlatın.")
             except Exception as e:
                 st.error(f"Silinirken hata oluştu: {e}")
+
+        # Eğer ikisi de zaten yoksa
         else:
             st.info("Zaten hafıza boş.")
 
@@ -79,7 +90,7 @@ if prompt := st.chat_input("Döküman hakkında sorunuzu yazın..."):
         message_placeholder.markdown("Thinkering... 🧠")
 
         try:
-            # SENİN YAZDIĞIN FONKSİYONU ÇAĞIRIYORUZ
+
             full_response = ask_pdf(prompt)
             message_placeholder.markdown(full_response)
 
