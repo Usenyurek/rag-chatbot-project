@@ -11,6 +11,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
 import pickle
+import langchain
+langchain.debug = True
 
 
 
@@ -31,7 +33,7 @@ def pdf_to_vectorstore(pdf_path):
 
     # BM25 (TF-IDF based)
     bm25_retriever = BM25Retriever.from_documents(splits)
-    bm25_retriever.k = 5
+    bm25_retriever.k = 3
 
     # Saving the BM25 Index
     with open("bm25_index.pkl", "wb") as f:
@@ -52,7 +54,7 @@ def ask_pdf(question):
         embedding_function=embeddings
     )
     #retrieve aşamasını güçlendirmek için: retriever = BM25Retriever.from_texts(["foo", "bar", "world", "hello", "foo bar"])
-    vector_retriever = db.as_retriever(search_kwargs={"k": 5})
+    vector_retriever = db.as_retriever(search_kwargs={"k": 10})
 
     # BM25
     with open("bm25_index.pkl", "rb") as f:
@@ -61,7 +63,7 @@ def ask_pdf(question):
     # Ensemble Retriever (Hybrid Search)
     ensemble_retriever = EnsembleRetriever(
         retrievers=[bm25_retriever, vector_retriever],
-        weights=[0.5, 0.5]
+        weights=[0.4, 0.6]
     )
 
     template_str = """
@@ -84,7 +86,9 @@ def ask_pdf(question):
     """
     prompt = ChatPromptTemplate.from_template(template_str)
 
-    llm = ChatOllama(model="llama3", temperature=0)
+    llm = ChatOllama(model="llama3",
+                     temperature=0.1,
+                     repeat_penalty=1.2)
 
     def format_docs(docs):
         return "\n\n".join([d.page_content for d in docs])

@@ -2,7 +2,10 @@ import streamlit as st
 import os
 import tempfile
 import shutil
+from langchain_core.globals import set_debug
 from service import pdf_to_vectorstore, ask_pdf
+
+set_debug(True)
 
 # 1. SAYFA AYARLARI
 st.set_page_config(page_title="RAG Asistanı", page_icon="🤖", layout="wide")

@@ -6,6 +6,8 @@ venv/
 
 # RAG Veritabanı
 chroma_db/
+#BM25 index data
+bm25_index.pkl/
 
 # IDE Ayarları
 .idea/
