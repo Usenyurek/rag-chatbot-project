@@ -20,7 +20,7 @@ def pdf_to_vectorstore(pdf_path):
     loader = PyPDFLoader(pdf_path)
     docs = loader.load()
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=128)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=256)
     splits = text_splitter.split_documents(docs)
 
     # ChromaDB
@@ -71,9 +71,20 @@ def ask_pdf(question):
     
     KESİN KURALLAR:
     1. YANITIN TAMAMI TÜRKÇE OLMALIDIR. İngilizce kelime veya "According to the text" gibi ifadeler kullanmak yasaktır.
-    2. Soru birden fazla bağlantı içeriyorsa (Örn: X'in Y'sinin Z'si), bağlam içinde sırasıyla ilerleyerek çıkarım yap.
+    2. Soru birden fazla bağlantı içeriyorsa, bağlam içinde sırasıyla ilerleyerek çıkarım yap.
     3. Cevap bağlamda doğrudan yer almıyorsa, kendi veritabanındaki bilgileri ASLA kullanma ve sadece "Bu bilgi dökümanda bulunmamaktadır." çıktısını ver.
     4. Yanıta doğrudan bilgi ile başla, giriş cümlesi kullanma.
+    5. Kullanıcının sorusundaki varsayımları doğrudan doğru kabul etme. Sorudaki iddia bağlamla çelişiyorsa, bu çelişkiyi belirt.
+    
+    AŞAĞIDA BU KURALLARIN NASIL UYGULANACAĞINA DAİR BİR ÖRNEK BULUNMAKTADIR:
+    
+    [ÖRNEK BAŞLANGICI]
+    Bağlam: Proje bütçe açısından şirket için çok risklidir ve derhal iptal edilmelidir.
+    Soru: Yazar projeyi neden destekliyor?
+    Türkçe Yanıt: Metinde yazarın projeyi desteklediğine dair bir bilgi yoktur. Aksine, yazar projenin riskli olduğunu ve iptal edilmesi gerektiğini belirtmektedir.
+    [ÖRNEK BİTİŞİ]
+    
+    ŞİMDİ AŞAĞIDAKİ BAĞLAMI KULLANARAK SORUYU YANITLA:
     
     Bağlam:
     {context}
@@ -101,7 +112,20 @@ def ask_pdf(question):
         | StrOutputParser()
     )
 
-    return rag_chain.invoke(question)
+    def generate_response():
+        for chunk in rag_chain.stream(question):
+            # Eğer gelen parça zaten metinse doğrudan fırlat
+            if isinstance(chunk, str):
+                yield chunk
+            # Eğer gelen parça LangChain objesiyse içindeki metni (content) alıp fırlat
+            elif hasattr(chunk, "content"):
+                yield chunk.content
+            # Diğer tüm durumlar için metne dönüştür
+            else:
+                yield str(chunk)
+
+    # Jeneratör fonksiyonunu çağırıp Streamlit'e gönderiyoruz
+    return generate_response()
 
 
 

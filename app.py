@@ -82,23 +82,18 @@ for message in st.session_state.messages:
 
 # 5. SORU SORMA KISMI
 if prompt := st.chat_input("Döküman hakkında sorunuzu yazın..."):
-
     # Kullanıcı mesajını ekrana bas
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    # Asistan Cevabı Üretiliyor...
+    # Asistanın cevabını ekrana bas
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        message_placeholder.markdown("Thinkering... 🧠")
+        # ask_pdf artık bir metin (string) değil, bir veri akışı (stream) döndürüyor
+        stream_generator = ask_pdf(prompt)
 
-        try:
+        # st.write_stream, gelen parçaları anında ekrana daktilo gibi yazar
+        # ve en sonunda tam metni (full_response) bize geri verir
+        full_response = st.write_stream(stream_generator)
 
-            full_response = ask_pdf(prompt)
-            message_placeholder.markdown(full_response)
-
-            # Cevabı hafızaya kaydet
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-        except Exception as e:
-            message_placeholder.error(f"Bir hata oluştu: {e}")
+    # Tamamlanan cevabı sohbet geçmişine (session_state) kaydet
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
